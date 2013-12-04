@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <!-- CSS -->
+    <style type="text/css">
+      html { height: 100% }
+      body { height: 100%; margin: 0; padding: 0 }
+      #map-canvas { height: 100%}
+    </style>
+    <!-- JS -->
+    <!-- external -->
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+    <script type="text/javascript" src="http://2026c574.ngrok.com/socket.io/socket.io.js"></script>
+    <!-- mine -->
+    <script>
+      var sock = io.connect("http://2026c574.ngrok.com");
+      sock.on('hello', function(){
+        console.log("hi");
+      });
+    </script>
+
+    <script type="text/javascript">
+      var map;
+      var markers = [];
+      var myLatLon = new google.maps.LatLng(-85,0);
+      var delta = 10;
+
+      function initialize() {
+        // OPTIONS
+        var mapOptions = {
+          center: new google.maps.LatLng(10, 10),
+          zoom: 2,
+          disableDefaultUI: true,
+          mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+
+        // INSTANTIATE
+        map = new google.maps.Map(document.getElementById("map-canvas"),
+            mapOptions);
+
+        // CREATE A MARKER EVERY delta LATS & LONS
+        // for (var j=0; j<18; j++){
+        //   for (var i=0; i<36; i++){
+        //     addMarker(myLatLon);
+        //     // console.log(myLatLon);
+        //     myLatLon = new google.maps.LatLng(myLatLon.lb, myLatLon.mb+delta);
+        //   }
+        //   myLatLon = new google.maps.LatLng(myLatLon.lb+delta, 0);
+        // }
+
+        // listen for clicks & display latLon
+        google.maps.event.addListener(map, 'click', function(e){
+          console.log(e.latLng.lb, e.latLng.mb);
+        })
+      }
+
+      function setAllMarkers(a){
+        var index = 0;
+        a.forEach(function(m){
+          setTimeout(function(){
+            myLatLon = new google.maps.LatLng(m.lat, m.lon);
+            addMarker(myLatLon);
+            setTimeout(function(){
+              removeMarker();
+            }, 3200);
+            // console.log(m);
+          }, 20*index++);
+        });
+      }
+
+      function addMarker(l){
+        var marker = new google.maps.Marker({
+          position: l,
+          map: map,
+          title: l.lb+" "+l.mb,
+          // animation: google.maps.Animation.DROP,
+          draggable: false
+        });
+        markers.push(marker);
+        sock.emit('add_marker');
+      }
+
+      function removeMarker(){
+        markers.shift().setMap(null);
+      }
+
+      // wait till everything's loaded before rendering map
+      google.maps.event.addDomListener(window, 'load', initialize);
+
+      // setInterval(function(){
+      //   myLatLon = new google.maps.LatLng(Math.random()*170-85, Math.random()*360-180);
+      //   addMarker(myLatLon);
+      //   setTimeout(function(){
+      //     removeMarker();
+      //   }, 3200);
+      // }, 100);
+      
+      sock.on('displ_locs', function(locs){
+        setAllMarkers(locs);
+        // locs.forEach(function(loc){
+        //   myLatLon = new google.maps.LatLng(loc.lat, loc.lon);
+        //   addMarker(myLatLon);
+        //   setTimeout(function(){
+        //     removeMarker();
+        //   }, 3200);
+        // });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas" />
+  </body>
+</html>

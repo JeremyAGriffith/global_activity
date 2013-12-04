@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Node, D3 & a Globe</title>
+    <style>
+        body {
+          background: #060606;
+        }
+    </style>
+</head>
+<body>
+    <script src="http://d3js.org/d3.v3.min.js"></script>
+    <script src="http://d3js.org/topojson.v1.min.js"></script>
+    <script type="text/javascript" src="http://localhost:8888/socket.io/socket.io.js"></script>
+    <script>
+    var width = 960,
+        height = 720,
+        speed = 1e-2,
+        start = Date.now(),
+        // coords = [];
+        blips;
+    var socket = io.connect("http://localhost:8888");
+
+    var sphere = {type: "Sphere"};
+
+    var projection = d3.geo.orthographic()
+        .scale(height / 2.1)
+        .translate([width / 2, height / 2])
+        .clipAngle(90)
+        .precision(.5);
+
+    var graticule = d3.geo.graticule();
+
+    var canvas = d3.select("body").append("canvas")
+        .attr("width", width)
+        .attr("height", height);
+
+    var context = canvas.node().getContext("2d");
+
+    var path = d3.geo.path()
+        .projection(projection)
+        .context(context);
+
+    d3.json("http://localhost:8888/world-110m.json", function(error, topo) {
+      console.log(topo);
+      var land = topojson.feature(topo, topo.objects.land),
+          borders = topojson.mesh(topo, topo.objects.countries, function(a, b) { return a !== b; }),
+          grid = graticule();
+
+      d3.timer(function() {
+        // var startingTime = Date.now();
+        projection.rotate([speed * (Date.now() - start), -10]);
+
+        context.clearRect(0, 0, width, height);
+
+        // context.beginPath();
+        // path(sphere);
+        // context.lineWidth = 3;
+        // context.strokeStyle = "#fff";
+        // context.stroke();
+
+        // var grd = context.createRadialGradient(width*.5-100, height*.5-100, 150, width*.5-100, height*.5-100, 300);
+        // var grd = context.createLinearGradient(200, 0, width, 0);
+        // grd.addColorStop(0, "#030C19");
+        // grd.addColorStop(1, "#041020");
+
+        // OCEAN
+        context.beginPath();
+        path(sphere);
+        context.fillStyle = "#111";
+        context.fill();
+
+        // LAND
+        context.beginPath();
+        path(land);
+        context.fillStyle = "#222";
+        context.fill();
+
+        // BORDERS
+        context.beginPath();
+        path(borders);
+        context.lineWidth = .5;
+        context.strokeStyle = "#333";
+        context.stroke();
+
+        // BLIPS
+        // var blips = { "type": "MultiLineString",
+        //              "coordinates": coords};
+        context.beginPath();
+        path(blips);
+        context.lineWidth = .75;
+        context.strokeStyle = "#fff";
+        context.stroke();
+
+        // context.beginPath();
+        // path(grid);
+        // context.lineWidth = .5;
+        // context.strokeStyle = "rgba(163,163,163,0.2)";
+        // context.stroke();
+
+        // console.log(Date.now()-startingTime);
+      });
+    });
+
+    d3.select(self.frameElement).style("height", height + "px");
+
+    </script>
+
+    <script>
+        socket.on('coords_arrived', function(coords){
+            blips = { "type": "MultiLineString",
+                "coordinates": coords};
+        });
+        // setInterval(function(){
+        //     createCoords(Math.ceil(Math.random()*1000));
+        // }, 3000);
+
+        // function createCoords(num_of_coords){
+        //     coords = [];
+        //     for (var i=0; i<num_of_coords; i++){
+        //         var lat = Math.random()*170-85,
+        //             lng = Math.random()*360-180;
+        //         coords.push([[lat, lng], [lat+0.1, lng+0.1]]);
+        //     }
+        //     return coords;
+        // }
+    </script>
+</body>
+</html>
